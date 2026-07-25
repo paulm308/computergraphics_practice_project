@@ -65,13 +65,29 @@ def rotate(vector: tuple[float, float, float]):
     return rx @ ry @ rz
 
 
+def scale_and_mirror(vector: tuple[float, float, float]):
+    return np.array([[vector[0], 0., 0., 0.],
+                     [0., vector[1], 0., 0.],
+                     [0., 0., vector[2], 0.],
+                     [0., 0., 0., 1.]])
+
+
+def shear(vector: tuple):
+    assert len(vector) == 6
+    return np.array([[1., vector[0], vector[1], 0.],
+                     [vector[2], 1., vector[3], 0.],
+                     [vector[4], vector[5], 1., 0.],
+                     [0., 0., 0., 1.]])
+
+
 if __name__ == "__main__":
     cube_verteces, cube_faces = generate_cube()
     cube_verteces = convert_to_homegeneous(cube_verteces)
     cube_verteces = convert_to_numpy(cube_verteces)
-    tm1 = translate((-0.5, -0.5, -0.5))
-    rx = rotate((90., 90., 0.))
-    tm2 = translate((1.5, 1.5, 1.5))
-    m = tm2 @ rx @ tm1
+    t1 = translate((-0.5, -0.5, -0.5))
+    r = rotate((90., 90., 0.))
+    s = scale_and_mirror((2., 2., 2.))
+    t2 = translate((1.5, 1.5, 1.5))
+    m = t2 @ s @ r @ t1
     cube_verteces = [m @ vertex.T for vertex in cube_verteces]
     print(cube_verteces)
