@@ -105,5 +105,18 @@ def compute_light(direction, light_positions, point, verteces, normal, faces, fa
     return alpha * rho * L_indirect + light_sum
 
 
-def compute_lighting(faces: list):
-    pass
+# TODO MUSS NOCH GETESTET WERDEN!
+def compute_image(intersections, num_x, num_y, rays, verteces, light_positions, faces, face_normals, surface_atributes, light_atributes, background_color):
+    image = [[] for i in range(num_x)]
+    for x in range(num_x):
+        for y in range(num_y):
+            idx = x + y * num_x
+            color = background_color
+            if intersections[idx] is not None:
+                direction = rays[idx][1]
+                t = intersections[idx][0]
+                point = rays[0] + t * direction
+                face_index = intersections[idx][1]
+                normal = face_normals[face_index]
+                color = compute_light(direction, light_positions, point, verteces, normal, faces, face_index, surface_atributes, light_atributes)
+            image[x].append(color)

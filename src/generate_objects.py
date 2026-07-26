@@ -34,12 +34,20 @@ def generate_cube():
     return cube_verteces, cube_faces, cube_surface_normals
 
 
-def convert_to_homegeneous(verteces: list[tuple[float, float, float]]):
+def convert_to_homogeneous_vertex(verteces: list[tuple[float, float, float]]):
     return [(vertex[0], vertex[1], vertex[2], 1.0) for vertex in verteces]
 
 
-def convert_to_cartesian(verteces: list[tuple[float, float, float, float]]):
-    return [(vertex[0] / vertex[3], vertex[1] / vertex[3], vertex[2] / vertex[3]) for vertex in verteces]
+def convert_to_homogeneous_vector(vectors: list[tuple[float, float, float]]):
+    return [(vector[0], vector[1], vector[2], 0.0) for vector in vectors]
+
+
+def convert_to_cartesians(verteces):
+    return [np.array([vertex[0] / vertex[3], vertex[1] / vertex[3], vertex[2] / vertex[3]]) if abs(vertex[3]) > 1e-10 else vertex[:3] for vertex in verteces]
+
+
+def convert_to_cartesian(vertex):
+    return np.array([vertex[0] / vertex[3], vertex[1] / vertex[3], vertex[2] / vertex[3]]) if abs(vertex[3]) > 1e-10 else vertex[:3]
 
 
 def convert_to_numpy(verteces: list[tuple]):
@@ -107,9 +115,9 @@ def clean(array, tol=1e-10):
 if __name__ == "__main__":
     cube_verteces, cube_faces, cube_surface_normals = generate_cube()
 
-    cube_verteces = convert_to_homegeneous(cube_verteces)
+    cube_verteces = convert_to_homogeneous_vertex(cube_verteces)
     cube_verteces = convert_to_numpy(cube_verteces)
-    cube_surface_normals = convert_to_homegeneous(cube_surface_normals)
+    cube_surface_normals = convert_to_homogeneous_vector(cube_surface_normals)
     cube_surface_normals = convert_to_numpy(cube_surface_normals)
 
     t1 = translate((-0.5, -0.5, -0.5))
