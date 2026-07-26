@@ -1,5 +1,5 @@
 import numpy as np
-from generate_objects import normalize
+from src.generate_objects import normalize
 
 
 def compute_rays(num_x: int, num_y: int, focal_point_x: float):
@@ -8,13 +8,13 @@ def compute_rays(num_x: int, num_y: int, focal_point_x: float):
     sensor_pixel_top_left_y = -(num_y * pixel_width) / 2 + 0.5 * pixel_width
 
     rays = []
-    for x in range(num_x):
-        for y in range(num_y):
+    for y in range(num_y):
+        for x in range(num_x):
             sensor_pixel_x_pos = sensor_pixel_top_left_x + x * pixel_width
             sensor_pixel_y_pos = sensor_pixel_top_left_y + y * pixel_width
 
-            sensor_pixel_pos = np.array([0., sensor_pixel_y_pos, sensor_pixel_x_pos, 1.])
-            focal_point = np.array([focal_point_x, 0., 0., 1.])
+            sensor_pixel_pos = np.array([0., sensor_pixel_y_pos, sensor_pixel_x_pos])
+            focal_point = np.array([focal_point_x, 0., 0.])
             direction = normalize(sensor_pixel_pos - focal_point)
             rays.append((sensor_pixel_pos, direction))
     return rays
@@ -105,7 +105,6 @@ def compute_light(direction, light_positions, point, verteces, normal, faces, fa
     return alpha * rho * L_indirect + light_sum
 
 
-# TODO MUSS NOCH GETESTET WERDEN!
 def compute_image(intersections, num_x, num_y, rays, verteces, light_positions, faces, face_normals, surface_atributes, light_atributes, background_color):
     image = [[] for i in range(num_x)]
     for x in range(num_x):
@@ -115,8 +114,9 @@ def compute_image(intersections, num_x, num_y, rays, verteces, light_positions, 
             if intersections[idx] is not None:
                 direction = rays[idx][1]
                 t = intersections[idx][0]
-                point = rays[0] + t * direction
+                point = rays[idx][0] + t * direction
                 face_index = intersections[idx][1]
                 normal = face_normals[face_index]
                 color = compute_light(direction, light_positions, point, verteces, normal, faces, face_index, surface_atributes, light_atributes)
             image[x].append(color)
+    return image
