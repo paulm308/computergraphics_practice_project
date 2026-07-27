@@ -26,4 +26,4 @@ def display_dynamic_scene(scene: Callable):
 
 
 if __name__ == "__main__":
-    display_dynamic_scene(scene.dynamic_cube_scene)
+    display_static_scene(scene.room_scene)
