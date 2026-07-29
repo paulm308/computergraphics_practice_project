@@ -1,6 +1,7 @@
 import numpy as np
 from tqdm import tqdm
 from src.generate_objects import normalize
+from concurrent.futures import ProcessPoolExecutor
 
 
 def compute_rays(num_x: int, num_y: int, focal_point_x: float):
@@ -55,7 +56,7 @@ def ray_triangle_intersect(origin, direction, verteces, epsilon=1e-8):
 def compute_intersections(rays: list, verteces: list, faces: list):
     all_face_verteces = [[verteces[face[i]] for i in range(len(face))] for face in faces]
     res = []
-    for ray_idx in tqdm(range(len(rays)), leave=False):
+    for ray_idx in tqdm(range(len(rays))):
         origin, direction = rays[ray_idx]
         intersections = []
         for face_index, face_verteces in enumerate(all_face_verteces):
@@ -67,6 +68,27 @@ def compute_intersections(rays: list, verteces: list, faces: list):
         else:
             res.append(None)
     return res
+
+
+def compute_intersections_parallel(rays: list, verteces: list, faces: list, processes: int):
+    indeces_per_process = len(rays) // processes
+
+    args = []
+    for p in range(processes):
+        start = p * indeces_per_process
+        end = (p + 1) * indeces_per_process
+        args.append((rays[start: end], verteces, faces))
+
+    intersections_subsets = []
+    with ProcessPoolExecutor() as executor:
+        futures = [executor.submit(compute_intersections, *arg) for arg in args]
+        intersections_subsets = [f.result() for f in futures]
+
+    intersections = []
+    for subset in intersections_subsets:
+        intersections += subset
+
+    return intersections
 
 
 def compute_light(direction, light_positions, point, verteces, normal, faces, face_index, surface_atributes, light_atributes, indirect_light):
@@ -100,15 +122,67 @@ def compute_light(direction, light_positions, point, verteces, normal, faces, fa
         n_dot_l = max(np.dot(n, l_i), 0)
         r_dot_v = max(np.dot(r_i, v), 0)
 
+        # print(f"beta: {beta}")
+        # print(f"rho: {rho}")
+        # print(f"gamma: {gamma}")
+        # print(f"rho_white: {rho_white}")
+        # print(f"r_dot_v: {r_dot_v}")
+        # print(f"m: {m}")
+        # print(f"n_dot_l: {n_dot_l}")
+        # print(f"n: {n}")
+        # print(f"r_i: {r_i}")
+        # print(f"L_i: {L_i}")
+        # print(f"v: {v}")
+        # print(f"L_indirect: {L_indirect}")
         tmp = beta * rho + gamma * rho_white * (r_dot_v ** m)
         light_sum += L_i * n_dot_l * tmp
 
     return alpha * rho * L_indirect + light_sum
 
 
+def compute_image_parallel(intersections, num_x, num_y, rays, verteces, light_positions, faces, face_normals, surface_atributes, light_atributes, background_color, indirect_light, processes):
+    rows_per_process = num_y // processes
+
+    args = []
+
+    for p in range(processes):
+        start_row = p * rows_per_process
+        end_row = (p + 1) * rows_per_process
+
+        start = start_row * num_x
+        end = end_row * num_x
+
+        args.append((
+            intersections[start:end],
+            num_x,
+            rows_per_process,
+            rays[start:end],
+            verteces,
+            light_positions,
+            faces,
+            face_normals,
+            surface_atributes,
+            light_atributes,
+            background_color,
+            indirect_light))
+
+    image_segments = []
+    with ProcessPoolExecutor() as executor:
+        futures = [executor.submit(compute_image, *arg) for arg in args]
+        image_segments = [f.result() for f in futures]
+
+    image = [[] for _ in range(num_x)]
+
+    for segment in image_segments:
+        for x in range(num_x):
+            image[x].extend(segment[x])
+
+    return image
+
+
 def compute_image(intersections, num_x, num_y, rays, verteces, light_positions, faces, face_normals, surface_atributes, light_atributes, background_color, indirect_light):
     image = [[] for i in range(num_x)]
-    for x in tqdm(range(num_x), leave=False):
+    for x in tqdm(range(num_x)):
         for y in range(num_y):
             idx = x + y * num_x
             color = background_color
